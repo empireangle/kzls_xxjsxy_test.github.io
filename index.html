@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>计算机维修社团 · 能力测评</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-dark:#1d4ed8; --bg:#f1f5f9; --card:#ffffff;
+    --text:#0f172a; --muted:#64748b; --border:#e2e8f0; --ok:#16a34a; --warn:#d97706;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  .wrap{max-width:760px;margin:0 auto;padding:16px}
+  header.hero{background:linear-gradient(135deg,#1d4ed8,#3b82f6);color:#fff;border-radius:12px;padding:28px 20px;margin-bottom:16px}
+  header.hero h1{font-size:22px;margin-bottom:6px}
+  header.hero p{opacity:.92;font-size:14px}
+  .card{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+  .section-title{font-size:16px;font-weight:700;color:var(--primary-dark);margin-bottom:12px;padding-bottom:8px;border-bottom:2px solid var(--primary)}
+  .field{margin-bottom:14px}
+  .field label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+  .field input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px}
+  .field input:focus{outline:2px solid var(--primary);border-color:var(--primary)}
+  .err{color:#dc2626;font-size:12px;margin-top:2px;display:none}
+  .q{margin-bottom:18px}
+  .q .qtext{font-size:15px;font-weight:600;margin-bottom:8px}
+  .q .qtext .no{color:var(--primary);margin-right:4px}
+  .opt{display:flex;align-items:flex-start;padding:10px 12px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;cursor:pointer;transition:background .15s,border-color .15s}
+  .opt:hover{background:#eff6ff;border-color:var(--primary)}
+  .opt input{margin-right:10px;margin-top:4px;accent-color:var(--primary);width:16px;height:16px;flex-shrink:0}
+  .opt span{font-size:14px}
+  .opt.sel{background:#eff6ff;border-color:var(--primary)}
+  .btn{display:block;width:100%;padding:14px;background:var(--primary);color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:700;cursor:pointer}
+  .btn:hover{background:var(--primary-dark)}
+  .btn:disabled{background:#94a3b8;cursor:not-allowed}
+  #result{display:none}
+  .score-big{font-size:44px;font-weight:800;color:var(--primary);text-align:center}
+  .level{text-align:center;font-size:18px;font-weight:700;margin:8px 0 16px}
+  .bar-row{margin-bottom:10px}
+  .bar-row .bar-label{display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px}
+  .bar{height:10px;background:var(--border);border-radius:5px;overflow:hidden}
+  .bar>i{display:block;height:100%;background:var(--primary);border-radius:5px;transition:width .6s}
+  .advice{background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px;font-size:13px;color:#92400e;margin-top:14px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:12px 0 24px}
+  .progress-tip{font-size:13px;color:var(--muted);text-align:center;margin-bottom:12px}
+  .status-ok{color:var(--ok);font-weight:700}
+  .status-bad{color:#dc2626;font-weight:700}
+  @media(min-width:600px){header.hero h1{font-size:26px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>计算机维修社团 · 能力测评</h1>
+    <p>本问卷用于了解大家的计算机基础水平，帮助社团安排后续培训内容。共 28 题选择题，约需 10 分钟，请独立完成。</p>
+  </header>
+
+  <form id="quizForm" novalidate>
+    <div class="card">
+      <div class="section-title">一、基本信息</div>
+      <div class="field">
+        <label for="cls">班级 *</label>
+        <input id="cls" name="cls" type="text" placeholder="例如：计算机2301班" autocomplete="off">
+        <div class="err" id="err-cls">请填写班级</div>
+      </div>
+      <div class="field">
+        <label for="name">姓名 *</label>
+        <input id="name" name="name" type="text" placeholder="请输入真实姓名" autocomplete="off">
+        <div class="err" id="err-name">请填写姓名</div>
+      </div>
+      <div class="field">
+        <label for="phone">手机号 *</label>
+        <input id="phone" name="phone" type="tel" maxlength="11" placeholder="11 位手机号" autocomplete="off">
+        <div class="err" id="err-phone">请填写正确的 11 位手机号</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-title">二、测评题目（28 题，单选）</div>
+      <div class="progress-tip">已答 <b id="answered">0</b> / 28 题</div>
+      <div id="questions"></div>
+    </div>
+
+    <button class="btn" type="submit" id="submitBtn">交卷并查看结果</button>
+  </form>
+
+  <div class="card" id="result">
+    <div class="section-title">测评结果</div>
+    <div class="score-big"><span id="score">0</span><span style="font-size:18px;color:var(--muted)"> / 100 分</span></div>
+    <div class="level" id="level"></div>
+    <div id="bars"></div>
+    <div class="advice" id="advice"></div>
+    <p class="progress-tip" style="margin-top:14px" id="uploadStatus"></p>
+    <button class="btn" type="button" onclick="location.reload()" style="margin-top:12px">重新作答</button>
+  </div>
+
+  <footer>计算机维修社团 · 能力测评问卷</footer>
+</div>
+
+<script src="config.js"></script>
+<script>
+/* ============ 题库：28 题 ============ */
+/* c: 1=计算机基础 2=硬件组装 3=系统安装 4=网络基础与网线 5=路由器与网络服务 */
+var QUESTIONS = [
+  {c:1,t:"计算机中负责进行算术和逻辑运算的核心部件是？",o:["内存","CPU","硬盘","显卡"],a:1},
+  {c:1,t:"1GB 等于多少 MB？",o:["100 MB","512 MB","1024 MB","2048 MB"],a:2},
+  {c:1,t:"下列哪种存储设备断电后数据不会丢失？",o:["内存条（RAM）","CPU 缓存","固态硬盘（SSD）","寄存器"],a:2},
+  {c:1,t:"Windows 中复制文件的快捷键是？",o:["Ctrl+V","Ctrl+C","Ctrl+X","Ctrl+Z"],a:1},
+  {c:1,t:"BIOS/UEFI 通常保存在主板的哪种芯片中？",o:["ROM/Flash 芯片","内存条","CPU","南桥散热片"],a:0},
+  {c:2,t:"目前主流内存条与主板的接口类型是？",o:["PCI-E","SATA","DDR4/DDR5 DIMM 插槽","M.2"],a:2},
+  {c:2,t:"安装 CPU 时需要注意的最关键事项是？",o:["涂上越多硅脂越好","防呆缺口对位，避免暴力压插","先接电源再放 CPU","必须戴防静电手环才能触碰包装盒"],a:1},
+  {c:2,t:"CPU 与散热器之间涂抹硅脂的作用是？",o:["导电","增加绝缘","填补缝隙、提高导热效率","防锈"],a:2},
+  {c:2,t:"主板上的 SATA 接口主要用于连接？",o:["显示器","硬盘/光驱","音箱","打印机"],a:1},
+  {c:2,t:"电脑开机后风扇转但屏幕无显示，首先应检查？",o:["重新安装系统和驱动","内存、显卡是否插接到位","鼠标是否失灵","机箱外观是否划伤"],a:1},
+  {c:2,t:"拆装电脑硬件前，为防止静电损坏元件，正确的做法是？",o:["先喝水湿润双手","触摸接地金属或佩戴防静电手环释放静电","用湿毛巾擦手","直接带电插拔"],a:1},
+  {c:3,t:"制作 Windows 启动 U 盘通常需要对 U 盘进行什么操作？",o:["仅格式化为 NTFS 即可","写入引导信息和系统安装文件","只复制 ISO 文件进去","不用做任何处理"],a:1},
+  {c:3,t:"进入主板启动菜单选择 U 盘启动，常用按键是？",o:["F12 / F11 / ESC（因主板而异）","Ctrl+Alt+Del","PrintScreen","NumLock"],a:0},
+  {c:3,t:"新硬盘安装系统前一般需要先做什么？",o:["贴标签","分区并格式化（建立分区表）","放进冰箱除湿","升级显卡驱动"],a:1},
+  {c:3,t:"UEFI 模式安装 Windows 时，硬盘分区表建议使用？",o:["MBR","GPT","FAT16","EXT2"],a:1},
+  {c:3,t:"系统安装完成后无法上网，最可能缺少的是？",o:["办公软件","网卡驱动","壁纸主题","输入法"],a:1},
+  {c:4,t:"IPv4 地址 192.168.1.1 属于哪类地址？",o:["公网地址","私有（内网）地址","组播地址","回环地址"],a:1},
+  {c:4,t:"制作直连网线（T568B 标准）的线序是？",o:["白橙、橙、白绿、蓝、白蓝、绿、白棕、棕","白绿、绿、白橙、蓝、白蓝、橙、白棕、棕","橙、白橙、绿、白绿、蓝、白蓝、棕、白棕","全白排序即可"],a:0},
+  {c:4,t:"测试网线是否连通、线序是否正确的工具是？",o:["网线测线仪","万用表","示波器","测电笔"],a:0},
+  {c:4,t:"网线水晶头（RJ45）的压制工具是？",o:["剥线钳+压线钳","螺丝刀","电烙铁","钳流表"],a:0},
+  {c:4,t:"宿舍里多台电脑组成小型局域网，可用交换机如何扩展接口？",o:["用普通 LAN 口连接各设备","必须使用光模块","必须用路由器 WAN 口","用 USB 口连接"],a:0},
+  {c:4,t:"在 Windows 中查看本机 IP 地址的命令是？",o:["ipconfig","ping","netstat -an","dir"],a:0},
+  {c:5,t:"家用无线路由器管理地址通常是？",o:["192.168.1.1 或 192.168.0.1","8.8.8.8","255.255.255.255","10.0.0.0/8 任意地址"],a:0},
+  {c:5,t:"路由器 WAN 口的作用是？",o:["连接内部电脑","连接上级网络（光猫/运营商）","连接打印机","连接无线天线"],a:1},
+  {c:5,t:"检查与某台主机网络是否连通的常用命令是？",o:["ping","ipconfig","format","chkdsk"],a:0},
+  {c:5,t:"DHCP 服务的主要功能是？",o:["解析域名","自动给设备分配 IP 地址","加密无线信号","放大 WiFi 信号"],a:1},
+  {c:5,t:"WiFi 无法上网时，下列排查顺序最合理的是？",o:["直接恢复出厂设置再看","先看光猫/路由器指示灯和线路，再登录管理界面查看状态","立即砸掉路由器","重新买一个路由器"],a:1},
+  {c:5,t:"要提高无线网络的穿墙覆盖能力，合理的做法是？",o:["把路由器藏进金属弱电箱","选择合适信道、摆放在开阔居中位置或增加 AP","把天线全部拧下来","把功率调到最低"],a:1}
+];
+
+var CATS = [
+  {id:1,name:"计算机基础"},
+  {id:2,name:"硬件组装"},
+  {id:3,name:"系统安装"},
+  {id:4,name:"网络基础与网线"},
+  {id:5,name:"路由器与网络服务"}
+];
+
+var answers = {};
+
+function esc(s){return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+function render(){
+  var html = "";
+  QUESTIONS.forEach(function(q,i){
+    html += '<div class="q" data-idx="'+i+'"><div class="qtext"><span class="no">'+(i+1)+'.</span>'+esc(q.t)+'</div>';
+    q.o.forEach(function(opt,j){
+      html += '<label class="opt"><input type="radio" name="q'+i+'" value="'+j+'"><span>'+String.fromCharCode(65+j)+'. '+esc(opt)+'</span></label>';
+    });
+    html += '</div>';
+  });
+  document.getElementById("questions").innerHTML = html;
+
+  document.getElementById("quizForm").addEventListener("change",function(e){
+    if(e.target.name && e.target.name.indexOf("q")===0){
+      var idx = parseInt(e.target.name.slice(1),10);
+      answers[idx] = parseInt(e.target.value,10);
+      document.getElementById("answered").textContent = Object.keys(answers).length;
+      var card = e.target.closest(".opt");
+      card.parentNode.querySelectorAll(".opt").forEach(function(o){o.classList.remove("sel");});
+      card.classList.add("sel");
+    }
+  });
+}
+
+function show(key, valid){
+  var input = document.getElementById(key);
+  var err = document.getElementById("err-"+key);
+  if(valid){ input.style.borderColor=""; err.style.display="none"; }
+  else{ input.style.borderColor="#dc2626"; err.style.display="block"; }
+}
+
+function validate(){
+  var ok = true;
+  var cls = document.getElementById("cls").value.trim();
+  var name = document.getElementById("name").value.trim();
+  var phone = document.getElementById("phone").value.trim();
+  show("cls", !!cls); show("name", !!name); show("phone", /^1\d{10}$/.test(phone));
+  if(!cls || !name || !/^1\d{10}$/.test(phone)) ok = false;
+  var unanswered = QUESTIONS.length - Object.keys(answers).length;
+  if(unanswered > 0){
+    ok = false;
+    alert("还有 " + unanswered + " 道题未作答，请完成后交卷。");
+    var first = null;
+    for(var i=0;i<QUESTIONS.length;i++){ if(answers[i]===undefined){first=i;break;} }
+    if(first!==null){ var el=document.querySelector('[data-idx="'+first+'"]'); if(el) el.scrollIntoView({behavior:"smooth",block:"center"}); }
+  }
+  return ok;
+}
+
+function grade(){
+  var catScore = {}, catTotal = {};
+  CATS.forEach(function(c){ catScore[c.id]=0; catTotal[c.id]=0; });
+  var correct = 0;
+  QUESTIONS.forEach(function(q,i){
+    catTotal[q.c]++;
+    if(answers[i]===q.a){ correct++; catScore[q.c]++; }
+  });
+  var score = Math.round(correct / QUESTIONS.length * 100);
+  document.getElementById("score").textContent = score;
+
+  var level, lvColor;
+  if(score>=85){ level="优秀 —— 具备独立装机与组网能力，可担任社团骨干"; lvColor="var(--ok)"; }
+  else if(score>=70){ level="良好 —— 基础扎实，稍加培训即可参与实操任务"; lvColor="var(--ok)"; }
+  else if(score>=50){ level="中等 —— 有一定基础，建议参加系统培训后再上岗"; lvColor="var(--warn)"; }
+  else{ level="入门 —— 基础较薄弱，欢迎加入社团从零开始学习"; lvColor="var(--warn)"; }
+  var lv = document.getElementById("level");
+  lv.textContent = level; lv.style.color = lvColor;
+
+  var bars = "";
+  CATS.forEach(function(c){
+    var pct = catTotal[c.id] ? Math.round(catScore[c.id]/catTotal[c.id]*100) : 0;
+    bars += '<div class="bar-row"><div class="bar-label"><span>'+c.name+'</span><span>'+catScore[c.id]+'/'+catTotal[c.id]+'（'+pct+'%）</span></div><div class="bar"><i style="width:'+pct+'%"></i></div></div>';
+  });
+  document.getElementById("bars").innerHTML = bars;
+
+  var weakest = null, minPct = 101;
+  CATS.forEach(function(c){
+    var pct = catTotal[c.id] ? catScore[c.id]/catTotal[c.id]*100 : 0;
+    if(pct < minPct){ minPct = pct; weakest = c; }
+  });
+  var adviceMap = {
+    1:"建议复习：计算机组成原理、常用快捷键与基础操作。",
+    2:"建议重点学习：硬件识别、装机流程与静电防护，社团将安排装机实操。",
+    3:"建议重点学习：启动 U 盘制作、BIOS 设置、分区与系统安装。",
+    4:"建议重点学习：网线制作与测试、IP 地址基础、常用网络命令。",
+    5:"建议重点学习：路由器配置、DHCP/WiFi 排障流程。"
+  };
+  document.getElementById("advice").innerHTML = "<b>提升建议：</b>" + (weakest ? adviceMap[weakest.id] : "继续保持！");
+
+  document.getElementById("result").style.display = "block";
+  document.getElementById("result").scrollIntoView({behavior:"smooth"});
+  document.getElementById("submitBtn").disabled = true;
+  document.getElementById("submitBtn").textContent = "已交卷";
+
+  return {
+    cls: document.getElementById("cls").value.trim(),
+    name: document.getElementById("name").value.trim(),
+    phone: document.getElementById("phone").value.trim(),
+    score: score,
+    level: level,
+    detail: CATS.map(function(c){
+      return {cat:c.name, got:catScore[c.id], total:catTotal[c.id]};
+    }),
+    answers: QUESTIONS.map(function(q,i){ return answers[i]; }),
+    time: new Date().toLocaleString("zh-CN")
+  };
+}
+
+/* 上传到 JSONBin */
+function uploadResult(payload){
+  var st = document.getElementById("uploadStatus");
+  if(!CONFIG.BIN_ID || !CONFIG.ACCESS_KEY){
+    st.textContent = "（云端未配置，本次结果仅保存在本页，请截图保存）";
+    return;
+  }
+  st.textContent = "正在提交成绩...";
+  var base = "https://api.jsonbin.io/v3/b/" + CONFIG.BIN_ID;
+  var headers = {"X-Access-Key": CONFIG.ACCESS_KEY};
+  fetch(base + "/latest", {headers: headers})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      var rec = (d && d.record && Array.isArray(d.record)) ? d.record : [];
+      rec.push(payload);
+      return fetch(base, {
+        method: "PUT",
+        headers: {"Content-Type":"application/json", "X-Access-Key":CONFIG.ACCESS_KEY, "X-Bin-Versioning":"false"},
+        body: JSON.stringify(rec)
+      });
+    })
+    .then(function(r){
+      if(r.ok){ st.innerHTML = '<span class="status-ok">成绩提交成功！</span>'; }
+      else{ st.innerHTML = '<span class="status-bad">成绩提交失败，请截图本页结果并发给负责老师。</span>'; }
+    })
+    .catch(function(){
+      st.innerHTML = '<span class="status-bad">网络异常，成绩提交失败，请截图本页结果并发给负责老师。</span>';
+    });
+}
+
+document.getElementById("quizForm").addEventListener("submit",function(e){
+  e.preventDefault();
+  if(validate()){
+    var payload = grade();
+    uploadResult(payload);
+  }
+});
+
+render();
+</script>
+</body>
+</html>

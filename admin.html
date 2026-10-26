@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>成绩管理后台 · 教师端</title>
+<style>
+  :root{
+    --primary:#2563eb; --primary-dark:#1d4ed8; --bg:#f1f5f9; --card:#fff;
+    --text:#0f172a; --muted:#64748b; --border:#e2e8f0; --ok:#16a34a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:"Microsoft YaHei","PingFang SC",sans-serif;background:var(--bg);color:var(--text);line-height:1.6}
+  .wrap{max-width:1080px;margin:0 auto;padding:16px}
+  header.hero{background:linear-gradient(135deg,#0f766e,#14b8a6);color:#fff;border-radius:12px;padding:24px 20px;margin-bottom:16px}
+  header.hero h1{font-size:22px}
+  header.hero p{opacity:.92;font-size:13px}
+  .card{background:var(--card);border-radius:12px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(15,23,42,.08)}
+  .field label{display:block;font-size:14px;font-weight:600;margin-bottom:4px}
+  .field input{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:14px;margin-bottom:10px}
+  .btn{padding:10px 18px;background:var(--primary);color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;margin-right:8px}
+  .btn:hover{background:var(--primary-dark)}
+  .btn.ghost{background:#fff;color:var(--primary-dark);border:1px solid var(--primary)}
+  .btn.danger{background:#dc2626}
+  .stat-row{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:16px}
+  .stat{flex:1;min-width:140px;background:var(--card);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(15,23,42,.08);text-align:center}
+  .stat .num{font-size:28px;font-weight:800;color:var(--primary)}
+  .stat .lbl{font-size:13px;color:var(--muted)}
+  .tbl-wrap{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px;min-width:760px}
+  th{background:#eff6ff;color:var(--primary-dark);padding:10px 8px;text-align:left;white-space:nowrap}
+  td{padding:9px 8px;border-bottom:1px solid var(--border);white-space:nowrap}
+  tr:hover td{background:#f8fafc}
+  .hint{font-size:13px;color:var(--muted);margin:8px 0}
+  .empty{text-align:center;color:var(--muted);padding:30px 0}
+  #loginMsg{color:#dc2626;font-size:13px;margin-top:6px}
+  .hidden{display:none}
+  select{padding:6px 10px;border:1px solid var(--border);border-radius:6px;font-size:13px}
+  footer{text-align:center;color:var(--muted);font-size:12px;padding:12px 0 24px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="hero">
+    <h1>成绩管理后台（教师端）</h1>
+    <p>查看学生测评答卷、统计分析与导出 Excel/CSV</p>
+  </header>
+
+  <!-- 登录区 -->
+  <div class="card" id="loginCard">
+    <div class="field">
+      <label>请输入 JSONBin 的 Master Key（仅保存在本页面会话中，不会上传）</label>
+      <input type="password" id="masterKey" placeholder="$2a$10$....">
+      <label>Bin ID（首次使用可留空，点"创建新数据仓库"自动生成）</label>
+      <input type="text" id="binIdInput" placeholder="留空则自动创建新的 Bin">
+      <button class="btn" id="loginBtn">进入后台</button>
+      <button class="btn ghost" id="createBtn">创建新数据仓库</button>
+      <div id="loginMsg"></div>
+      <p class="hint">提示：Master Key 在 jsonbin.io 登录后 API Keys 页面查看。建议教师优先在本地电脑直接双击打开本文件使用，密钥不经过公网。</p>
+    </div>
+  </div>
+
+  <!-- 后台主体 -->
+  <div id="panel" class="hidden">
+    <div class="stat-row" id="stats"></div>
+
+    <div class="card">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        <b>答卷明细（<span id="count">0</span> 份）</b>
+        <div>
+          <select id="filterClass"><option value="">全部班级</option></select>
+          <button class="btn" id="refreshBtn" style="margin-left:8px">刷新</button>
+          <button class="btn ghost" id="exportBtn">导出 CSV（Excel 可打开）</button>
+          <button class="btn danger" id="logoutBtn">退出</button>
+        </div>
+      </div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr>
+            <th>#</th><th>提交时间</th><th>班级</th><th>姓名</th><th>手机号</th>
+            <th>总分</th><th>等级</th><th>计算机基础</th><th>硬件组装</th><th>系统安装</th><th>网络与网线</th><th>路由器服务</th>
+          </tr></thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+      <div class="empty hidden" id="emptyTip">暂无答卷数据</div>
+    </div>
+  </div>
+
+  <footer>计算机维修社团 · 成绩管理后台</footer>
+</div>
+
+<script>
+var masterKey = "", binId = "", records = [];
+
+var $ = function(id){ return document.getElementById(id); };
+
+function msg(s, ok){ $("loginMsg").textContent = s; $("loginMsg").style.color = ok ? "var(--ok)" : "#dc2626"; }
+
+function headers(){ return {"X-Master-Key": masterKey}; }
+
+/* 创建新 Bin */
+$("createBtn").addEventListener("click", function(){
+  masterKey = $("masterKey").value.trim();
+  if(!masterKey){ msg("请先填写 Master Key"); return; }
+  fetch("https://api.jsonbin.io/v3/b", {
+    method: "POST",
+    headers: {"Content-Type":"application/json", "X-Master-Key": masterKey},
+    body: JSON.stringify([])
+  }).then(function(r){ return r.json(); })
+  .then(function(d){
+    if(d && d.metadata && d.metadata.id){
+      binId = d.metadata.id;
+      $("binIdInput").value = binId;
+      msg("创建成功！Bin ID: " + binId + "，请把它填入 config.js 后再发布学生端。", true);
+    } else {
+      msg("创建失败：" + (d && d.message ? d.message : "请检查 Master Key"));
+    }
+  }).catch(function(){ msg("网络错误，请重试"); });
+});
+
+/* 登录并加载 */
+$("loginBtn").addEventListener("click", function(){
+  masterKey = $("masterKey").value.trim();
+  binId = $("binIdInput").value.trim() || (typeof CONFIG !== "undefined" ? CONFIG.BIN_ID : "");
+  if(!masterKey){ msg("请填写 Master Key"); return; }
+  if(!binId){ msg("请填写 Bin ID（或先创建新数据仓库）"); return; }
+  load();
+});
+
+function load(){
+  $("loginMsg").textContent = "正在加载...";
+  $("loginMsg").style.color = "var(--muted)";
+  fetch("https://api.jsonbin.io/v3/b/" + binId + "/latest", {headers: headers()})
+    .then(function(r){ return r.json(); })
+    .then(function(d){
+      if(d && d.record !== undefined){
+        records = Array.isArray(d.record) ? d.record : [];
+        sessionStorage.setItem("q_admin", JSON.stringify({k:masterKey, b:binId}));
+        show();
+      } else {
+        msg("读取失败：" + (d && d.message ? d.message : "请检查 Bin ID 和 Master Key"));
+      }
+    })
+    .catch(function(){ msg("网络错误，请重试"); });
+}
+
+function show(){
+  $("loginCard").classList.add("hidden");
+  $("panel").classList.remove("hidden");
+  renderStats();
+  renderTable();
+}
+
+function renderStats(){
+  var n = records.length;
+  var avg = n ? Math.round(records.reduce(function(s,r){return s+(r.score||0);},0)/n) : 0;
+  var max = n ? Math.max.apply(null, records.map(function(r){return r.score||0;})) : 0;
+  var min = n ? Math.min.apply(null, records.map(function(r){return r.score||0;})) : 0;
+  var excellent = records.filter(function(r){return (r.score||0)>=85;}).length;
+  $("stats").innerHTML =
+    '<div class="stat"><div class="num">'+n+'</div><div class="lbl">答卷总数</div></div>'+
+    '<div class="stat"><div class="num">'+avg+'</div><div class="lbl">平均分</div></div>'+
+    '<div class="stat"><div class="num">'+max+'</div><div class="lbl">最高分</div></div>'+
+    '<div class="stat"><div class="num">'+min+'</div><div class="lbl">最低分</div></div>'+
+    '<div class="stat"><div class="num">'+excellent+'</div><div class="lbl">优秀人数(≥85)</div></div>';
+}
+
+function renderTable(){
+  var filter = $("filterClass").value;
+  var classes = {};
+  records.forEach(function(r){ classes[r.cls||"未填写"] = 1; });
+  var cur = $("filterClass").value;
+  $("filterClass").innerHTML = '<option value="">全部班级</option>' +
+    Object.keys(classes).sort().map(function(c){
+      return '<option value="'+c+'"'+(c===cur?" selected":"")+'>'+c+'</option>';
+    }).join("");
+  var list = records.filter(function(r){ return !filter || (r.cls||"未填写")===filter; });
+  list.sort(function(a,b){ return (b.score||0)-(a.score||0); });
+  $("count").textContent = list.length;
+  var rows = list.map(function(r,i){
+    var d = r.detail || [];
+    var cells = [0,1,2,3,4].map(function(j){
+      return d[j] ? (d[j].got+"/"+d[j].total) : "-";
+    });
+    return "<tr><td>"+(i+1)+"</td><td>"+(r.time||"-")+"</td><td>"+(r.cls||"-")+"</td><td>"+(r.name||"-")+"</td><td>"+(r.phone||"-")+"</td>"+
+      '<td><b style="color:var(--primary)">'+(r.score||0)+"</b></td><td>"+(r.level||"-").split(" ")[0]+"</td>"+
+      "<td>"+cells.join("</td><td>")+"</td></tr>";
+  }).join("");
+  $("tbody").innerHTML = rows;
+  $("emptyTip").classList.toggle("hidden", list.length > 0);
+}
+
+$("filterClass").addEventListener("change", renderTable);
+$("refreshBtn").addEventListener("click", load);
+$("logoutBtn").addEventListener("click", function(){
+  sessionStorage.removeItem("q_admin");
+  location.reload();
+});
+
+$("exportBtn").addEventListener("click", function(){
+  var filter = $("filterClass").value;
+  var list = records.filter(function(r){ return !filter || (r.cls||"未填写")===filter; });
+  list.sort(function(a,b){ return (b.score||0)-(a.score||0); });
+  var head = ["序号","提交时间","班级","姓名","手机号","总分","等级","计算机基础","硬件组装","系统安装","网络与网线","路由器服务"];
+  var lines = [head.join(",")];
+  list.forEach(function(r,i){
+    var d = r.detail || [];
+    var cells = [0,1,2,3,4].map(function(j){ return d[j] ? (d[j].got+"/"+d[j].total) : "-"; });
+    var row = [i+1, r.time||"", r.cls||"", r.name||"", "'"+(r.phone||""), r.score||0, (r.level||"").split(" ")[0]].concat(cells);
+    lines.push(row.map(function(v){ return '"'+String(v).replace(/"/g,'""')+'"'; }).join(","));
+  });
+  var blob = new Blob(["\ufeff"+lines.join("\r\n")], {type:"text/csv;charset=utf-8"});
+  var a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "测评成绩_" + new Date().toISOString().slice(0,10) + ".csv";
+  a.click();
+});
+
+/* 页面刷新后自动恢复会话 */
+try{
+  var saved = JSON.parse(sessionStorage.getItem("q_admin") || "null");
+  if(saved && saved.k && saved.b){
+    masterKey = saved.k; binId = saved.b;
+    $("masterKey").value = saved.k; $("binIdInput").value = saved.b;
+    load();
+  }
+}catch(e){}
+</script>
+</body>
+</html>
