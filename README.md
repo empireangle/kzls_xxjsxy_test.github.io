@@ -1,0 +1,2 @@
+# kzls_xxjsxy_test
+克孜勒苏职业技术学院信息技术学院IMC社团测试
